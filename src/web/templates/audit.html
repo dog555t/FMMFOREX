@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Logs - FMMFOREX{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>FTC Compliance Audit Report</h2>
+    
+    <div class="status-grid">
+        <div class="status-item">
+            <strong>Total Entries</strong>
+            {{ report.total_entries }}
+        </div>
+        <div class="status-item">
+            <strong>Trade Entries</strong>
+            {{ report.trades.total_entries }}
+        </div>
+        <div class="status-item">
+            <strong>Trade Exits</strong>
+            {{ report.trades.total_exits }}
+        </div>
+        <div class="status-item">
+            <strong>Risk Checks</strong>
+            {{ report.risk_controls.total_checks }}
+        </div>
+        <div class="status-item">
+            <strong>Risk Triggered</strong>
+            {{ report.risk_controls.total_triggered }}
+        </div>
+        <div class="status-item">
+            <strong>Model Predictions</strong>
+            {{ report.model_predictions.total }}
+        </div>
+    </div>
+    
+    {% if report.by_type %}
+    <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Events by Type</h3>
+    <div class="status-grid">
+        {% for event_type, count in report.by_type.items() %}
+        <div class="status-item">
+            <strong>{{ event_type.replace('_', ' ').title() }}</strong>
+            {{ count }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Recent Audit Logs (Last 100)</h2>
+    
+    {% if logs %}
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Event Type</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td style="white-space: nowrap;">{{ log.timestamp }}</td>
+                    <td>{{ log.event_type }}</td>
+                    <td>
+                        <details>
+                            <summary style="cursor: pointer;">View Details</summary>
+                            <pre style="margin-top: 0.5rem; font-size: 0.85rem;">{{ log.details | tojson(indent=2) }}</pre>
+                        </details>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        No audit logs available yet. Run a backtest to generate audit logs.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

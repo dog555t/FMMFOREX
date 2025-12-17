@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 
@@ -22,10 +22,11 @@ class RiskConfig:
 
 
 class RiskEngine:
-    def __init__(self, config: RiskConfig) -> None:
+    def __init__(self, config: RiskConfig, audit_logger: Optional[object] = None) -> None:
         self.config = config
         self.equity_curve: List[float] = []
         self.open_positions = 0
+        self.audit_logger = audit_logger
 
     def can_open(self, position_size: float) -> bool:
         within_limits = self.open_positions < self.config.max_positions and position_size <= self.config.max_leverage
@@ -55,7 +56,23 @@ class RiskEngine:
             spread > self.config.spread_limit,
             realized_vol > self.config.volatility_percentile,
         ]
-        if any(triggers):
+        triggered = any(triggers)
+        
+        # Log risk control check
+        if self.audit_logger:
+            self.audit_logger.log_risk_control(
+                control_type="kill_switch",
+                triggered=triggered,
+                details={
+                    "daily_drawdown": float(daily_dd),
+                    "rolling_drawdown": float(rolling_dd),
+                    "spread": spread,
+                    "realized_vol": realized_vol,
+                    "triggers": triggers,
+                },
+            )
+        
+        if triggered:
             logger.warning("Kill switch activated with triggers %s", triggers)
             return True
         return False

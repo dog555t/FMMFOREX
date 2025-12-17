@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration - FMMFOREX{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>System Configuration</h2>
+    <p>View the current system configuration. To modify, edit <code>config.yaml</code> and restart the server.</p>
+</div>
+
+<div class="card">
+    <h2>Trading Settings</h2>
+    <table>
+        <tbody>
+            {% for key, value in config.trading.items() %}
+            <tr>
+                <td><strong>{{ key.replace('_', ' ').title() }}</strong></td>
+                <td>{{ value }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>Risk Controls</h2>
+    <table>
+        <tbody>
+            {% for key, value in config.risk.items() %}
+            <tr>
+                <td><strong>{{ key.replace('_', ' ').title() }}</strong></td>
+                <td>{{ value }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>OANDA Settings</h2>
+    <table>
+        <tbody>
+            {% for key, value in config.oanda.items() %}
+            <tr>
+                <td><strong>{{ key.replace('_', ' ').title() }}</strong></td>
+                <td>
+                    {% if key in ['access_token', 'account_id'] %}
+                        <span style="color: #999;">••••••••</span> (hidden)
+                    {% else %}
+                        {{ value }}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>Backtest Settings</h2>
+    <table>
+        <tbody>
+            {% for key, value in config.backtest.items() %}
+            <tr>
+                <td><strong>{{ key.replace('_', ' ').title() }}</strong></td>
+                <td>{{ value }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

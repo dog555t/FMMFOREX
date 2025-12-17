@@ -15,7 +15,7 @@ oanda:
 
 data:
   cache_path: "data/cache.sqlite"
-  synthetic: false
+  synthetic: true
 
 risk:
   daily_drawdown_limit: 0.04
@@ -33,3 +33,12 @@ backtest:
 
 monitoring:
   drift_threshold: 0.15
+
+audit:
+  log_path: "data/audit.jsonl"
+  enabled: true
+
+web:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
