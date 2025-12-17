@@ -1,0 +1,35 @@
+trading:
+  pair: "USD_JPY"
+  timeframe: "M15"
+  breakout_lookback: 20
+  atr_period: 14
+  risk_per_trade: 0.01
+  risky_mode_risk: 0.03
+  allow_calm: true
+
+oanda:
+  practice: true
+  account_id: "YOUR_PRACTICE_ACCOUNT"
+  access_token: "YOUR_TOKEN"
+  api_url: "https://api-fxpractice.oanda.com/v3"
+
+data:
+  cache_path: "data/cache.sqlite"
+  synthetic: false
+
+risk:
+  daily_drawdown_limit: 0.04
+  rolling_drawdown_limit: 0.10
+  spread_limit: 0.0006
+  volatility_percentile: 0.98
+  max_leverage: 20
+  max_positions: 3
+
+backtest:
+  initial_balance: 100000
+  slippage_pips: 0.0001
+  spread_pips: 0.0002
+  plot: true
+
+monitoring:
+  drift_threshold: 0.15
