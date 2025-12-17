@@ -44,7 +44,7 @@
             <tr>
                 <td><strong>{{ key.replace('_', ' ').title() }}</strong></td>
                 <td>
-                    {% if key in ['access_token', 'account_id'] %}
+                    {% if 'token' in key.lower() or 'key' in key.lower() or 'secret' in key.lower() or 'password' in key.lower() or 'account_id' in key.lower() %}
                         <span style="color: #999;">••••••••</span> (hidden)
                     {% else %}
                         {{ value }}
