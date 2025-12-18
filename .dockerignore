@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+dist
+build
+.pytest_cache
+
+# Virtual environments
+venv
+env
+ENV
+
+# Data and cache
+data/*.sqlite
+data/*.jsonl
+*.png
+*.jpg
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp
+/tmp
+*.tmp

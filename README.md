@@ -50,6 +50,58 @@ Prototype of a high-risk / high-reward FX trading system with strict risk contro
 ## Configuration
 See `config.yaml` for pairs, timeframes, risk limits, slippage/spread, and monitoring thresholds.
 
+## Docker Deployment
+
+Run multiple currency pair instances simultaneously using Docker Compose:
+
+### Quick Start with Docker
+```bash
+# Build and start all currency pair instances
+docker-compose up -d
+
+# Access individual instances:
+# USD/JPY: http://localhost:5000
+# EUR/USD: http://localhost:5001
+# GBP/USD: http://localhost:5002
+# AUD/USD: http://localhost:5003
+
+# View logs
+docker-compose logs -f
+
+# Stop all instances
+docker-compose down
+```
+
+### Single Currency Pair with Docker
+```bash
+# Build the Docker image
+docker build -t fmmforex .
+
+# Run a single instance
+docker run -p 5000:5000 \
+  -e TRADING_PAIR=USD_JPY \
+  -e TIMEFRAME=M15 \
+  -v $(pwd)/config.yaml:/app/config.yaml \
+  fmmforex
+```
+
+### Multi-Currency Comparison
+Use the CLI or web interface to compare multiple currency pairs:
+
+```bash
+# CLI comparison
+python -m src.cli compare-pairs --pairs USD_JPY,EUR_USD,GBP_USD --policy heuristic --charts
+
+# Or use the web interface at http://localhost:5000/compare
+```
+
+The multi-currency comparison feature allows you to:
+- Run backtests on multiple currency pairs simultaneously
+- Compare equity curves side-by-side
+- Analyze performance metrics across pairs
+- View interactive comparison charts
+- Identify the best performing currency pairs for your strategy
+
 ## Testing
 Run unit tests for features and risk controls:
 ```bash
@@ -61,6 +113,7 @@ pytest
 The web interface provides:
 - **Dashboard**: System status and configuration overview
 - **Backtest Runner**: Execute backtests with different policies via the UI
+- **Multi-Currency Comparison**: Compare performance across different currency pairs with interactive charts
 - **Audit Logs**: View comprehensive FTC compliance audit trail
 - **Configuration Viewer**: Inspect current system settings
 
@@ -84,9 +137,13 @@ Audit logs are stored in JSONL format at `data/audit.jsonl` (configurable in `co
 - `src/models/fakeout_classifier.py` – Fakeout probability model.
 - `src/models/rl_policy.py` – Heuristic and RL-style policy outputs.
 - `src/backtest/engine.py` – Backtest with slippage, metrics, plots.
+- `src/comparison/runner.py` – Multi-currency backtest runner.
+- `src/comparison/charts.py` – Comparison chart generation.
 - `src/trade/executor.py` – Paper/live execution stub.
 - `src/risk/controls.py` – Risk engine and kill switch.
 - `src/monitoring/drift.py` – Feature drift monitor.
 - `src/audit/logger.py` – FTC compliance audit logger.
 - `src/web/app.py` – Flask web application.
 - `src/cli.py` – CLI entrypoints.
+- `Dockerfile` – Docker container definition.
+- `docker-compose.yml` – Multi-instance orchestration.

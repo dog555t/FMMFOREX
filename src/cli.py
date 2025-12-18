@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -9,6 +10,8 @@ import yaml
 
 from src.audit.logger import AuditConfig, AuditLogger
 from src.backtest.engine import BacktestEngine
+from src.comparison.charts import create_comparison_charts
+from src.comparison.runner import MultiCurrencyRunner
 from src.data.cache import CandleCache
 from src.data.oanda_client import OandaClient, OandaConfig
 from src.features.build_features import FeatureConfig, build_breakout_features, build_regime_features
@@ -23,7 +26,17 @@ logger = logging.getLogger(__name__)
 
 def load_config(path: str = "config.yaml") -> dict:
     with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        cfg = yaml.safe_load(f)
+    
+    # Override with environment variables for Docker support
+    if "TRADING_PAIR" in os.environ:
+        cfg["trading"]["pair"] = os.environ["TRADING_PAIR"]
+    if "TIMEFRAME" in os.environ:
+        cfg["trading"]["timeframe"] = os.environ["TIMEFRAME"]
+    if "WEB_PORT" in os.environ:
+        cfg.setdefault("web", {})["port"] = int(os.environ["WEB_PORT"])
+    
+    return cfg
 
 
 def download_data(args: argparse.Namespace) -> None:
@@ -110,6 +123,31 @@ def paper_trade(args: argparse.Namespace) -> None:
     logger.info("Paper trading stub - integrate with TradeExecutor for live demo")
 
 
+def compare_pairs(args: argparse.Namespace) -> None:
+    cfg = load_config()
+    pairs = args.pairs.split(",")
+    timeframe = args.timeframe or cfg["trading"]["timeframe"]
+    policy = args.policy
+    
+    logger.info("Running multi-currency comparison for pairs: %s", pairs)
+    runner = MultiCurrencyRunner(cfg)
+    results = runner.run_multiple(pairs, timeframe, policy)
+    
+    # Generate comparison table
+    comparison_df = runner.compare_results(results)
+    logger.info("\n=== Multi-Currency Comparison Results ===\n%s", comparison_df.to_string(index=False))
+    
+    # Save results
+    comparison_df.to_csv("data/comparison_results.csv", index=False)
+    logger.info("Comparison results saved to data/comparison_results.csv")
+    
+    # Generate charts if requested
+    if args.charts:
+        logger.info("Generating comparison charts...")
+        charts = create_comparison_charts(results)
+        logger.info("Generated %d comparison charts", len(charts))
+
+
 def start_web_server(args: argparse.Namespace) -> None:
     cfg = load_config()
     web_cfg = cfg.get("web", {})
@@ -136,6 +174,13 @@ def main() -> None:
     backtest_parser.add_argument("--policy", choices=["heuristic", "rl"], default="heuristic")
     sub.add_parser("paper-trade")
     sub.add_parser("web", help="Start web interface")
+    
+    # Multi-currency comparison command
+    compare_parser = sub.add_parser("compare-pairs", help="Compare multiple currency pairs")
+    compare_parser.add_argument("--pairs", required=True, help="Comma-separated list of currency pairs (e.g., USD_JPY,EUR_USD,GBP_USD)")
+    compare_parser.add_argument("--timeframe", help="Timeframe (default: from config)")
+    compare_parser.add_argument("--policy", choices=["heuristic", "rl"], default="heuristic")
+    compare_parser.add_argument("--charts", action="store_true", help="Generate comparison charts")
 
     args = parser.parse_args()
     if args.command == "download-data":
@@ -148,6 +193,8 @@ def main() -> None:
         run_backtest(args)
     elif args.command == "paper-trade":
         paper_trade(args)
+    elif args.command == "compare-pairs":
+        compare_pairs(args)
     elif args.command == "web":
         start_web_server(args)
     else:
