@@ -55,6 +55,10 @@ backtest:
     # Gap-through behavior
     gap_through_enabled: true
     gap_slippage_multiplier: 2.0
+    gap_threshold_multiplier: 0.5
+    
+    # Volatility normalization
+    max_volatility_ratio: 0.01
 
 monitoring:
   drift_threshold: 0.15

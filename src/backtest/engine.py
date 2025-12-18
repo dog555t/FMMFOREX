@@ -19,6 +19,9 @@ from src.risk.controls import RiskEngine
 
 logger = logging.getLogger(__name__)
 
+# Constants
+SECONDS_PER_DAY = 24 * 3600
+
 
 @dataclass
 class BacktestResult:
@@ -183,7 +186,7 @@ class BacktestEngine:
             days_held = 0.0
             if i + 1 < len(df):
                 time_diff = pd.to_datetime(df.loc[i + 1, "time"]) - timestamp
-                days_held = time_diff.total_seconds() / (24 * 3600)
+                days_held = time_diff.total_seconds() / SECONDS_PER_DAY
             
             # Apply swap/financing
             swap_cost = self.execution_sim.calculate_swap(direction, actual_position_size, days_held)

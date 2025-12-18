@@ -39,6 +39,10 @@ class ExecutionConfig:
     # Gap-through behavior
     gap_through_enabled: bool = True
     gap_slippage_multiplier: float = 2.0  # Additional slippage during gaps
+    gap_threshold_multiplier: float = 0.5  # Threshold for gap detection (as multiple of volatility)
+    
+    # Volatility normalization
+    max_volatility_ratio: float = 0.01  # Maximum volatility/price ratio for normalization
     
 
 class TradingSession:
@@ -203,10 +207,10 @@ class ExecutionSimulator:
             if hit and self.config.gap_through_enabled:
                 # Check for gap
                 gap_size = max(0, stop_price - bar_low)
-                vol_normalized = volatility / current_price if current_price > 0 else 0.01
                 
                 # Larger gaps in high volatility
-                if gap_size > volatility * 0.5:
+                gap_threshold = volatility * self.config.gap_threshold_multiplier
+                if gap_size > gap_threshold:
                     # Gap detected - fill at worse price
                     fill_price = stop_price - slippage_pips * self.config.gap_slippage_multiplier
                     fill_price = max(fill_price, bar_low)  # Can't fill below low
@@ -217,9 +221,9 @@ class ExecutionSimulator:
             hit = bar_high >= stop_price
             if hit and self.config.gap_through_enabled:
                 gap_size = max(0, bar_high - stop_price)
-                vol_normalized = volatility / current_price if current_price > 0 else 0.01
                 
-                if gap_size > volatility * 0.5:
+                gap_threshold = volatility * self.config.gap_threshold_multiplier
+                if gap_size > gap_threshold:
                     # Gap detected - fill at worse price
                     fill_price = stop_price + slippage_pips * self.config.gap_slippage_multiplier
                     fill_price = min(fill_price, bar_high)  # Can't fill above high
