@@ -15,6 +15,8 @@ Prototype of a high-risk / high-reward FX trading system with strict risk contro
 - **Risk controls**: Kill-switch on drawdown, spread, volatility spikes, feature drift; max leverage and position caps.
 - **Backtest**: Slippage + spread model, equity curve metrics, per-regime stats, plots.
 - **Monitoring**: Simple feature drift detector to prevent model drift.
+- **FTC Audit Trail**: Comprehensive logging of all trading decisions, risk controls, and model predictions for compliance.
+- **Web Interface**: Flask-based web UI for running backtests, viewing audit logs, and monitoring system status.
 
 ## Quickstart
 1. Install dependencies:
@@ -35,7 +37,12 @@ Prototype of a high-risk / high-reward FX trading system with strict risk contro
    ```bash
    python -m src.cli backtest --policy heuristic
    ```
-6. Paper trade stub (extend `TradeExecutor` for live streaming):
+6. **Start web interface** (recommended):
+   ```bash
+   python -m src.cli web
+   ```
+   Then open your browser to `http://localhost:5000` to access the web dashboard.
+7. Paper trade stub (extend `TradeExecutor` for live streaming):
    ```bash
    python -m src.cli paper-trade
    ```
@@ -49,6 +56,26 @@ Run unit tests for features and risk controls:
 pytest
 ```
 
+## Web Interface
+
+The web interface provides:
+- **Dashboard**: System status and configuration overview
+- **Backtest Runner**: Execute backtests with different policies via the UI
+- **Audit Logs**: View comprehensive FTC compliance audit trail
+- **Configuration Viewer**: Inspect current system settings
+
+Access at `http://localhost:5000` after running `python -m src.cli web`.
+
+## FTC Audit Trail
+
+All trading decisions, risk controls, and model predictions are logged for compliance:
+- Trade entries and exits with timestamps
+- Risk control decisions (kill-switch activations, position limits)
+- Model predictions with confidence scores
+- Configuration changes
+
+Audit logs are stored in JSONL format at `data/audit.jsonl` (configurable in `config.yaml`).
+
 ## Files
 - `src/data/oanda_client.py` – OANDA client + synthetic data.
 - `src/data/cache.py` – SQLite caching layer.
@@ -60,4 +87,6 @@ pytest
 - `src/trade/executor.py` – Paper/live execution stub.
 - `src/risk/controls.py` – Risk engine and kill switch.
 - `src/monitoring/drift.py` – Feature drift monitor.
+- `src/audit/logger.py` – FTC compliance audit logger.
+- `src/web/app.py` – Flask web application.
 - `src/cli.py` – CLI entrypoints.

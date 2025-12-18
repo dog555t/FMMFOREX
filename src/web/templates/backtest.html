@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Backtest - FMMFOREX{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Run Backtest</h2>
+    <p>Execute a backtest with audit trail logging for compliance.</p>
+    
+    <div style="margin-top: 1.5rem;">
+        <label for="policy" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Policy Type:</label>
+        <select id="policy" style="padding: 0.5rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; width: 200px;">
+            <option value="heuristic">Heuristic</option>
+            <option value="rl">RL-Style</option>
+        </select>
+    </div>
+    
+    <div style="margin-top: 1.5rem;">
+        <button id="runBacktest" class="btn btn-success">Run Backtest</button>
+    </div>
+    
+    <div id="loading" style="display: none; margin-top: 1rem; color: #3498db;">
+        ⏳ Running backtest... This may take a moment.
+    </div>
+    
+    <div id="error" style="display: none; margin-top: 1rem;" class="alert alert-danger"></div>
+</div>
+
+<div id="results" style="display: none;">
+    <div class="card">
+        <h2>Backtest Results</h2>
+        
+        <div class="status-grid" id="metrics-grid">
+            <!-- Metrics will be inserted here -->
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>Regime Distribution</h2>
+        <div id="regime-dist">
+            <!-- Regime distribution will be inserted here -->
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('runBacktest').addEventListener('click', async function() {
+    const policy = document.getElementById('policy').value;
+    const loading = document.getElementById('loading');
+    const error = document.getElementById('error');
+    const results = document.getElementById('results');
+    
+    // Reset UI
+    loading.style.display = 'block';
+    error.style.display = 'none';
+    results.style.display = 'none';
+    this.disabled = true;
+    
+    try {
+        const response = await fetch('/api/backtest', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ policy: policy }),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Backtest failed');
+        }
+        
+        // Display results
+        const metricsGrid = document.getElementById('metrics-grid');
+        metricsGrid.innerHTML = `
+            <div class="status-item">
+                <strong>Final Balance</strong>
+                $${data.metrics.final_balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+            </div>
+            <div class="status-item">
+                <strong>Max Drawdown</strong>
+                ${(data.metrics.max_drawdown * 100).toFixed(2)}%
+            </div>
+            <div class="status-item">
+                <strong>Sharpe Ratio</strong>
+                ${data.metrics.sharpe.toFixed(2)}
+            </div>
+            <div class="status-item">
+                <strong>Win Rate</strong>
+                ${(data.metrics.win_rate * 100).toFixed(1)}%
+            </div>
+            <div class="status-item">
+                <strong>Avg R-Multiple</strong>
+                ${data.metrics.avg_r.toFixed(2)}R
+            </div>
+            <div class="status-item">
+                <strong>Total Trades</strong>
+                ${data.trades_count}
+            </div>
+        `;
+        
+        // Display regime distribution
+        const regimeDist = document.getElementById('regime-dist');
+        let regimeHtml = '<div class="status-grid">';
+        for (const [regime, pct] of Object.entries(data.regime_distribution)) {
+            regimeHtml += `
+                <div class="status-item">
+                    <strong>${regime.charAt(0).toUpperCase() + regime.slice(1)}</strong>
+                    ${(pct * 100).toFixed(1)}%
+                </div>
+            `;
+        }
+        regimeHtml += '</div>';
+        regimeDist.innerHTML = regimeHtml;
+        
+        results.style.display = 'block';
+        
+    } catch (err) {
+        error.textContent = '❌ Error: ' + err.message;
+        error.style.display = 'block';
+    } finally {
+        loading.style.display = 'none';
+        this.disabled = false;
+    }
+});
+</script>
+{% endblock %}

@@ -5,3 +5,5 @@ requests
 matplotlib
 scikit-learn
 lightgbm
+flask
+pytest

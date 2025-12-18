@@ -25,7 +25,7 @@ class CandleCache:
         table = f"candles_{pair}_{timeframe}"
         with sqlite3.connect(self.db_path) as conn:
             try:
-                df = pd.read_sql(table, conn, parse_dates=["time"])
+                df = pd.read_sql(f"SELECT * FROM {table}", conn, parse_dates=["time"])
                 logger.info("Loaded %s cached candles for %s", len(df), pair)
                 return df
             except Exception:

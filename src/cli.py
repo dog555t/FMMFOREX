@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
+from src.audit.logger import AuditConfig, AuditLogger
 from src.backtest.engine import BacktestEngine
 from src.data.cache import CandleCache
 from src.data.oanda_client import OandaClient, OandaConfig
@@ -78,7 +79,11 @@ def run_backtest(args: argparse.Namespace) -> None:
     classifier = FakeoutClassifier(ClassifierConfig())
     classifier.fit(breakout_feat.fillna(0), labels)
 
-    risk_engine = RiskEngine(RiskConfig(**cfg["risk"]))
+    # Setup audit logger
+    audit_cfg = AuditConfig(**cfg.get("audit", {}))
+    audit_logger = AuditLogger(audit_cfg)
+
+    risk_engine = RiskEngine(RiskConfig(**cfg["risk"]), audit_logger=audit_logger)
     policy = RLPolicy(max_leverage=cfg["risk"]["max_leverage"], mode=args.policy)
     engine = BacktestEngine(
         regime_model=regime_model,
@@ -88,10 +93,12 @@ def run_backtest(args: argparse.Namespace) -> None:
         slippage_pips=cfg["backtest"]["slippage_pips"],
         spread_pips=cfg["backtest"]["spread_pips"],
         initial_balance=cfg["backtest"]["initial_balance"],
+        audit_logger=audit_logger,
     )
     result = engine.run(df)
     logger.info("Backtest complete. Metrics: %s", result.metrics)
     logger.info("Regime distribution: %s", result.regime_distribution)
+    logger.info("Audit logs saved to: %s", audit_cfg.log_path)
 
 
 def paper_trade(args: argparse.Namespace) -> None:
@@ -101,6 +108,21 @@ def paper_trade(args: argparse.Namespace) -> None:
     if df is None:
         raise RuntimeError("No data cached. Run download-data first")
     logger.info("Paper trading stub - integrate with TradeExecutor for live demo")
+
+
+def start_web_server(args: argparse.Namespace) -> None:
+    cfg = load_config()
+    web_cfg = cfg.get("web", {})
+    
+    from src.web.app import create_app
+    
+    app = create_app()
+    host = web_cfg.get("host", "0.0.0.0")
+    port = web_cfg.get("port", 5000)
+    debug = web_cfg.get("debug", False)
+    
+    logger.info("Starting web server on http://%s:%s", host, port)
+    app.run(host=host, port=port, debug=debug)
 
 
 def main() -> None:
@@ -113,6 +135,7 @@ def main() -> None:
     backtest_parser = sub.add_parser("backtest")
     backtest_parser.add_argument("--policy", choices=["heuristic", "rl"], default="heuristic")
     sub.add_parser("paper-trade")
+    sub.add_parser("web", help="Start web interface")
 
     args = parser.parse_args()
     if args.command == "download-data":
@@ -125,6 +148,8 @@ def main() -> None:
         run_backtest(args)
     elif args.command == "paper-trade":
         paper_trade(args)
+    elif args.command == "web":
+        start_web_server(args)
     else:
         parser.print_help()
 

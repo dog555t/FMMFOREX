@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - FMMFOREX{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>System Status</h2>
+    
+    {% if status.data_available %}
+        <div class="alert alert-info">
+            ✅ System is ready. Data is available for backtesting.
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            ⚠️ No data available. Please run the data download command first.
+        </div>
+    {% endif %}
+    
+    <div class="status-grid">
+        <div class="status-item">
+            <strong>Trading Pair</strong>
+            {{ status.trading_pair }}
+        </div>
+        <div class="status-item">
+            <strong>Timeframe</strong>
+            {{ status.timeframe }}
+        </div>
+        <div class="status-item">
+            <strong>Data Rows</strong>
+            {{ status.data_rows }}
+        </div>
+        <div class="status-item">
+            <strong>Max Leverage</strong>
+            {{ status.risk_limits.max_leverage }}x
+        </div>
+        <div class="status-item">
+            <strong>Max Positions</strong>
+            {{ status.risk_limits.max_positions }}
+        </div>
+        <div class="status-item">
+            <strong>Daily DD Limit</strong>
+            {{ (status.risk_limits.daily_drawdown_limit * 100) | round(1) }}%
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Quick Actions</h2>
+    <p>Navigate to different sections to analyze your trading system:</p>
+    <br>
+    <a href="/backtest" class="btn btn-success">Run Backtest</a>
+    <a href="/audit" class="btn">View Audit Logs</a>
+    <a href="/config" class="btn">View Configuration</a>
+</div>
+
+<div class="card">
+    <h2>About</h2>
+    <p>FMMFOREX is a high-risk/high-reward FX trading system prototype with strict risk controls.</p>
+    <p><strong>⚠️ WARNING:</strong> This code is for research only. Live trading of leveraged FX is extremely risky.</p>
+    <br>
+    <p><strong>Features:</strong></p>
+    <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+        <li>Regime detection (calm/trend/panic)</li>
+        <li>Breakout signal detection with fakeout classification</li>
+        <li>Risk controls with kill-switch</li>
+        <li>Comprehensive audit logging for FTC compliance</li>
+        <li>Backtest engine with slippage modeling</li>
+    </ul>
+</div>
+{% endblock %}
