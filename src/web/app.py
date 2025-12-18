@@ -10,6 +10,8 @@ from flask import Flask, jsonify, render_template, request
 
 from src.audit.logger import AuditConfig, AuditLogger
 from src.backtest.engine import BacktestEngine
+from src.comparison.charts import create_comparison_charts
+from src.comparison.runner import MultiCurrencyRunner
 from src.data.cache import CandleCache
 from src.features.build_features import FeatureConfig, build_breakout_features, build_regime_features
 from src.models.fakeout_classifier import ClassifierConfig, FakeoutClassifier
@@ -142,6 +144,48 @@ def create_app(config_path: str = "config.yaml") -> Flask:
             return jsonify(report)
         except Exception as e:
             logger.error("Failed to generate audit report: %s", e)
+            return jsonify({"error": str(e)}), 500
+    
+    @app.route("/compare")
+    def compare_view() -> str:
+        """Multi-currency comparison page."""
+        return render_template("compare.html")
+    
+    @app.route("/api/compare", methods=["POST"])
+    def run_comparison() -> Dict[str, Any]:
+        """API endpoint to run multi-currency comparison."""
+        try:
+            data = request.get_json() or {}
+            pairs = data.get("pairs", [])
+            timeframe = data.get("timeframe", "M15")
+            policy = data.get("policy", "heuristic")
+            
+            if not pairs:
+                return jsonify({"error": "No currency pairs provided"}), 400
+            
+            cfg = load_config(app.config["CONFIG_PATH"])
+            runner = MultiCurrencyRunner(cfg)
+            
+            # Run backtests for all pairs
+            results = runner.run_multiple(pairs, timeframe, policy)
+            
+            if not results:
+                return jsonify({"error": "No results generated"}), 500
+            
+            # Generate comparison table
+            comparison_df = runner.compare_results(results)
+            
+            # Generate charts
+            charts = create_comparison_charts(results)
+            
+            return jsonify({
+                "success": True,
+                "comparison": comparison_df.to_dict(orient="records"),
+                "charts": charts,
+                "pairs_count": len(results),
+            })
+        except Exception as e:
+            logger.error("Comparison failed: %s", e, exc_info=True)
             return jsonify({"error": str(e)}), 500
     
     return app

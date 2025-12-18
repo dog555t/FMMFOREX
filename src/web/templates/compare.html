@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Compare Pairs - FMMFOREX{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Multi-Currency Comparison</h2>
+    <p>Run backtests on multiple currency pairs simultaneously and compare their performance on interactive charts.</p>
+    
+    <div style="margin-top: 1.5rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Currency Pairs:</label>
+        <div style="margin-bottom: 1rem;">
+            <label style="margin-right: 1rem;"><input type="checkbox" name="pair" value="USD_JPY" checked> USD/JPY</label>
+            <label style="margin-right: 1rem;"><input type="checkbox" name="pair" value="EUR_USD" checked> EUR/USD</label>
+            <label style="margin-right: 1rem;"><input type="checkbox" name="pair" value="GBP_USD" checked> GBP/USD</label>
+            <label style="margin-right: 1rem;"><input type="checkbox" name="pair" value="AUD_USD"> AUD/USD</label>
+            <label style="margin-right: 1rem;"><input type="checkbox" name="pair" value="USD_CHF"> USD/CHF</label>
+            <label style="margin-right: 1rem;"><input type="checkbox" name="pair" value="NZD_USD"> NZD/USD</label>
+            <label style="margin-right: 1rem;"><input type="checkbox" name="pair" value="USD_CAD"> USD/CAD</label>
+        </div>
+    </div>
+    
+    <div style="margin-top: 1rem;">
+        <label for="timeframe" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Timeframe:</label>
+        <select id="timeframe" style="padding: 0.5rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; width: 200px;">
+            <option value="M1">1 Minute</option>
+            <option value="M5">5 Minutes</option>
+            <option value="M15" selected>15 Minutes</option>
+            <option value="M30">30 Minutes</option>
+            <option value="H1">1 Hour</option>
+            <option value="H4">4 Hours</option>
+            <option value="D">Daily</option>
+        </select>
+    </div>
+    
+    <div style="margin-top: 1rem;">
+        <label for="policy" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Policy Type:</label>
+        <select id="policy" style="padding: 0.5rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px; width: 200px;">
+            <option value="heuristic">Heuristic</option>
+            <option value="rl">RL-Style</option>
+        </select>
+    </div>
+    
+    <div style="margin-top: 1.5rem;">
+        <button id="runComparison" class="btn btn-success">Run Comparison</button>
+    </div>
+    
+    <div id="loading" style="display: none; margin-top: 1rem; color: #3498db;">
+        ⏳ Running comparison... This may take several minutes depending on the number of pairs selected.
+    </div>
+    
+    <div id="error" style="display: none; margin-top: 1rem;" class="alert alert-danger"></div>
+</div>
+
+<div id="results" style="display: none;">
+    <div class="card">
+        <h2>Comparison Results</h2>
+        <p style="margin-bottom: 1rem;">Summary of backtest performance across selected currency pairs:</p>
+        <div style="overflow-x: auto;">
+            <table id="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Pair</th>
+                        <th>Final Balance</th>
+                        <th>Return %</th>
+                        <th>Max Drawdown</th>
+                        <th>Sharpe Ratio</th>
+                        <th>Win Rate</th>
+                        <th>Avg R</th>
+                        <th>Trades</th>
+                    </tr>
+                </thead>
+                <tbody id="comparison-tbody">
+                    <!-- Results will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>Equity Curves Comparison</h2>
+        <p>Normalized equity curves showing percentage returns over time for each currency pair:</p>
+        <img id="chart-equity" style="width: 100%; max-width: 1000px; margin-top: 1rem;" alt="Equity Curves">
+    </div>
+    
+    <div class="card">
+        <h2>Return Comparison</h2>
+        <p>Bar chart comparing total returns across currency pairs:</p>
+        <img id="chart-returns" style="width: 100%; max-width: 800px; margin-top: 1rem;" alt="Return Comparison">
+    </div>
+    
+    <div class="card">
+        <h2>Risk Metrics</h2>
+        <p>Maximum drawdown comparison to assess risk levels:</p>
+        <img id="chart-drawdown" style="width: 100%; max-width: 800px; margin-top: 1rem;" alt="Drawdown Comparison">
+    </div>
+    
+    <div class="card">
+        <h2>Performance Metrics</h2>
+        <p>Win rate and Sharpe ratio comparison across currency pairs:</p>
+        <img id="chart-performance" style="width: 100%; max-width: 1000px; margin-top: 1rem;" alt="Performance Metrics">
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const INITIAL_BALANCE = 100000;
+
+document.getElementById('runComparison').addEventListener('click', async function() {
+    const checkboxes = document.querySelectorAll('input[name="pair"]:checked');
+    const pairs = Array.from(checkboxes).map(cb => cb.value);
+    const timeframe = document.getElementById('timeframe').value;
+    const policy = document.getElementById('policy').value;
+    
+    const loading = document.getElementById('loading');
+    const error = document.getElementById('error');
+    const results = document.getElementById('results');
+    
+    if (pairs.length === 0) {
+        error.textContent = '❌ Please select at least one currency pair';
+        error.style.display = 'block';
+        return;
+    }
+    
+    // Reset UI
+    loading.style.display = 'block';
+    error.style.display = 'none';
+    results.style.display = 'none';
+    this.disabled = true;
+    
+    try {
+        const response = await fetch('/api/compare', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                pairs: pairs,
+                timeframe: timeframe,
+                policy: policy 
+            }),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Comparison failed');
+        }
+        
+        // Display comparison table
+        const tbody = document.getElementById('comparison-tbody');
+        tbody.innerHTML = '';
+        
+        data.comparison.forEach(row => {
+            const returnPct = ((row.final_balance - INITIAL_BALANCE) / INITIAL_BALANCE * 100).toFixed(2);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight: 600;">${row.pair}</td>
+                <td>$${row.final_balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td style="color: ${returnPct >= 0 ? 'green' : 'red'}; font-weight: 600;">${returnPct}%</td>
+                <td>${(row.max_drawdown * 100).toFixed(2)}%</td>
+                <td style="color: ${row.sharpe >= 0 ? 'green' : 'red'};">${row.sharpe.toFixed(2)}</td>
+                <td>${(row.win_rate * 100).toFixed(1)}%</td>
+                <td>${row.avg_r.toFixed(2)}R</td>
+                <td>${row.total_trades}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+        // Display charts
+        if (data.charts.equity_curves) {
+            document.getElementById('chart-equity').src = 'data:image/png;base64,' + data.charts.equity_curves;
+        }
+        if (data.charts.metrics_comparison) {
+            document.getElementById('chart-returns').src = 'data:image/png;base64,' + data.charts.metrics_comparison;
+        }
+        if (data.charts.drawdown_comparison) {
+            document.getElementById('chart-drawdown').src = 'data:image/png;base64,' + data.charts.drawdown_comparison;
+        }
+        if (data.charts.performance_comparison) {
+            document.getElementById('chart-performance').src = 'data:image/png;base64,' + data.charts.performance_comparison;
+        }
+        
+        results.style.display = 'block';
+        
+        // Scroll to results
+        results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+    } catch (err) {
+        error.textContent = '❌ Error: ' + err.message;
+        error.style.display = 'block';
+    } finally {
+        loading.style.display = 'none';
+        this.disabled = false;
+    }
+});
+</script>
+{% endblock %}

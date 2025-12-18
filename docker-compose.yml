@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # USD/JPY instance
+  fmmforex-usdjpy:
+    build: .
+    container_name: fmmforex-usdjpy
+    environment:
+      - TRADING_PAIR=USD_JPY
+      - TIMEFRAME=M15
+      - WEB_PORT=5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - usdjpy-data:/app/data
+    networks:
+      - fmmforex-network
+
+  # EUR/USD instance
+  fmmforex-eurusd:
+    build: .
+    container_name: fmmforex-eurusd
+    environment:
+      - TRADING_PAIR=EUR_USD
+      - TIMEFRAME=M15
+      - WEB_PORT=5001
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - eurusd-data:/app/data
+    networks:
+      - fmmforex-network
+
+  # GBP/USD instance
+  fmmforex-gbpusd:
+    build: .
+    container_name: fmmforex-gbpusd
+    environment:
+      - TRADING_PAIR=GBP_USD
+      - TIMEFRAME=M15
+      - WEB_PORT=5002
+    ports:
+      - "5002:5000"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - gbpusd-data:/app/data
+    networks:
+      - fmmforex-network
+
+  # AUD/USD instance
+  fmmforex-audusd:
+    build: .
+    container_name: fmmforex-audusd
+    environment:
+      - TRADING_PAIR=AUD_USD
+      - TIMEFRAME=M15
+      - WEB_PORT=5003
+    ports:
+      - "5003:5000"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - audusd-data:/app/data
+    networks:
+      - fmmforex-network
+
+volumes:
+  usdjpy-data:
+  eurusd-data:
+  gbpusd-data:
+  audusd-data:
+
+networks:
+  fmmforex-network:
+    driver: bridge
