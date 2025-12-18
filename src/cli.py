@@ -10,6 +10,7 @@ import yaml
 
 from src.audit.logger import AuditConfig, AuditLogger
 from src.backtest.engine import BacktestEngine
+from src.backtest.execution import ExecutionConfig
 from src.comparison.charts import create_comparison_charts
 from src.comparison.runner import MultiCurrencyRunner
 from src.data.cache import CandleCache
@@ -55,9 +56,18 @@ def train_regime(args: argparse.Namespace) -> None:
     df = cache.load(cfg["trading"]["pair"], cfg["trading"]["timeframe"])
     if df is None:
         raise RuntimeError("No data cached. Run download-data first")
-    feat = build_regime_features(df)
+    
+    # Build features for regime model
+    feat_cfg = FeatureConfig(breakout_lookback=cfg["trading"]["breakout_lookback"], atr_period=cfg["trading"]["atr_period"])
+    breakout_feat = build_breakout_features(df, feat_cfg)
+    
+    # Build regime features matching the backtest engine's expectations
+    regime_features = breakout_feat[["atr", "vol_expansion"]].copy()
+    regime_features["vol"] = df["close"].pct_change().rolling(10).std().fillna(0)
+    regime_features["drawdown"] = (df["close"] - df["close"].cummax()) / df["close"].cummax()
+    
     model = RegimeModel(RegimeModelConfig())
-    model.fit(feat)
+    model.fit(regime_features.fillna(0))
     logger.info("Regime model trained on cached data")
 
 
@@ -86,8 +96,13 @@ def run_backtest(args: argparse.Namespace) -> None:
     breakout_feat = build_breakout_features(df, feat_cfg)
     labels = (breakout_feat["breakout_up"] | breakout_feat["breakout_down"]).astype(int)
 
+    # Build regime features matching the backtest engine's expectations
+    regime_features = breakout_feat[["atr", "vol_expansion"]].copy()
+    regime_features["vol"] = df["close"].pct_change().rolling(10).std().fillna(0)
+    regime_features["drawdown"] = (df["close"] - df["close"].cummax()) / df["close"].cummax()
+    
     regime_model = RegimeModel(RegimeModelConfig())
-    regime_model.fit(build_regime_features(df))
+    regime_model.fit(regime_features.fillna(0))
 
     classifier = FakeoutClassifier(ClassifierConfig())
     classifier.fit(breakout_feat.fillna(0), labels)
@@ -98,6 +113,12 @@ def run_backtest(args: argparse.Namespace) -> None:
 
     risk_engine = RiskEngine(RiskConfig(**cfg["risk"]), audit_logger=audit_logger)
     policy = RLPolicy(max_leverage=cfg["risk"]["max_leverage"], mode=args.policy)
+    
+    # Load execution config if available
+    execution_config = None
+    if "execution" in cfg["backtest"]:
+        execution_config = ExecutionConfig(**cfg["backtest"]["execution"])
+    
     engine = BacktestEngine(
         regime_model=regime_model,
         classifier=classifier,
@@ -107,6 +128,7 @@ def run_backtest(args: argparse.Namespace) -> None:
         spread_pips=cfg["backtest"]["spread_pips"],
         initial_balance=cfg["backtest"]["initial_balance"],
         audit_logger=audit_logger,
+        execution_config=execution_config,
     )
     result = engine.run(df)
     logger.info("Backtest complete. Metrics: %s", result.metrics)

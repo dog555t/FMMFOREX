@@ -30,6 +30,35 @@ backtest:
   slippage_pips: 0.0001
   spread_pips: 0.0002
   plot: true
+  
+  # Enhanced execution simulation
+  execution:
+    # Session-based spreads (in pips)
+    spread_asia: 0.0003
+    spread_london: 0.0002
+    spread_ny: 0.00025
+    spread_overlap: 0.00015
+    
+    # Partial fills
+    partial_fill_probability: 0.15
+    partial_fill_min_ratio: 0.5
+    
+    # Re-quotes
+    requote_probability: 0.05
+    requote_spike_multiplier: 3.0
+    
+    # Swap/financing (daily rates)
+    swap_long_rate: -0.00005
+    swap_short_rate: -0.00003
+    commission_rate: 0.0
+    
+    # Gap-through behavior
+    gap_through_enabled: true
+    gap_slippage_multiplier: 2.0
+    gap_threshold_multiplier: 0.5
+    
+    # Volatility normalization
+    max_volatility_ratio: 0.01
 
 monitoring:
   drift_threshold: 0.15

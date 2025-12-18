@@ -13,7 +13,13 @@ Prototype of a high-risk / high-reward FX trading system with strict risk contro
 - **Fakeout classifier**: LightGBM (fallback GradientBoosting) binary classifier returning probability of fake breakout.
 - **Policy**: Heuristic or RL-style (stub) policy that translates signals into leverage, stops, targets, and scaling decisions.
 - **Risk controls**: Kill-switch on drawdown, spread, volatility spikes, feature drift; max leverage and position caps.
-- **Backtest**: Slippage + spread model, equity curve metrics, per-regime stats, plots.
+- **Enhanced Execution Simulation**: Realistic backtest execution with:
+  - **Session-based spreads**: Different spreads for Asia, London, NY, and overlap sessions
+  - **Partial fills**: Probability-based partial order fills with minimum fill ratios
+  - **Re-quotes**: Simulated re-quotes during high volatility periods
+  - **Swap/financing**: Daily overnight funding costs for long and short positions
+  - **Commission**: Optional per-trade commission costs
+  - **Gap-through behavior**: Realistic stop-loss execution with slippage during price gaps
 - **Monitoring**: Simple feature drift detector to prevent model drift.
 - **FTC Audit Trail**: Comprehensive logging of all trading decisions, risk controls, and model predictions for compliance.
 - **Web Interface**: Flask-based web UI for running backtests, viewing audit logs, and monitoring system status.
@@ -49,6 +55,39 @@ Prototype of a high-risk / high-reward FX trading system with strict risk contro
 
 ## Configuration
 See `config.yaml` for pairs, timeframes, risk limits, slippage/spread, and monitoring thresholds.
+
+### Enhanced Execution Configuration
+
+The backtest now supports realistic execution simulation with configurable parameters in `config.yaml`:
+
+```yaml
+backtest:
+  execution:
+    # Session-based spreads (in pips)
+    spread_asia: 0.0003          # Wider spreads during Asian session
+    spread_london: 0.0002         # Tighter spreads during London session
+    spread_ny: 0.00025            # Moderate spreads during NY session
+    spread_overlap: 0.00015       # Tightest spreads during London-NY overlap
+    
+    # Partial fills
+    partial_fill_probability: 0.15  # 15% chance of partial fill
+    partial_fill_min_ratio: 0.5     # Minimum 50% fill when partial
+    
+    # Re-quotes
+    requote_probability: 0.05         # 5% base re-quote probability
+    requote_spike_multiplier: 3.0     # Increases during volatility
+    
+    # Swap/financing (daily rates)
+    swap_long_rate: -0.00005      # Cost to hold long positions overnight
+    swap_short_rate: -0.00003     # Cost to hold short positions overnight
+    commission_rate: 0.0          # Per-unit commission (0 = no commission)
+    
+    # Gap-through behavior
+    gap_through_enabled: true           # Enable gap-through simulation
+    gap_slippage_multiplier: 2.0       # Extra slippage during gaps
+```
+
+These parameters allow for more realistic backtesting that accounts for real market conditions including varying liquidity across trading sessions, execution challenges, and overnight costs.
 
 ## Docker Deployment
 
@@ -137,6 +176,7 @@ Audit logs are stored in JSONL format at `data/audit.jsonl` (configurable in `co
 - `src/models/fakeout_classifier.py` – Fakeout probability model.
 - `src/models/rl_policy.py` – Heuristic and RL-style policy outputs.
 - `src/backtest/engine.py` – Backtest with slippage, metrics, plots.
+- `src/backtest/execution.py` – Enhanced execution simulation with session-based spreads, partial fills, re-quotes, swaps, and gap-through behavior.
 - `src/comparison/runner.py` – Multi-currency backtest runner.
 - `src/comparison/charts.py` – Comparison chart generation.
 - `src/trade/executor.py` – Paper/live execution stub.
