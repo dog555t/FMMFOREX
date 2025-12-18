@@ -10,6 +10,7 @@ from flask import Flask, jsonify, render_template, request
 
 from src.audit.logger import AuditConfig, AuditLogger
 from src.backtest.engine import BacktestEngine
+from src.backtest.execution import ExecutionConfig
 from src.comparison.charts import create_comparison_charts
 from src.comparison.runner import MultiCurrencyRunner
 from src.data.cache import CandleCache
@@ -94,6 +95,11 @@ def create_app(config_path: str = "config.yaml") -> Flask:
             risk_engine = RiskEngine(RiskConfig(**cfg["risk"]), audit_logger=audit_logger)
             policy_obj = RLPolicy(max_leverage=cfg["risk"]["max_leverage"], mode=policy)
             
+            # Load execution config if available
+            execution_config = None
+            if "execution" in cfg["backtest"]:
+                execution_config = ExecutionConfig(**cfg["backtest"]["execution"])
+            
             engine = BacktestEngine(
                 regime_model=regime_model,
                 classifier=classifier,
@@ -103,6 +109,7 @@ def create_app(config_path: str = "config.yaml") -> Flask:
                 spread_pips=cfg["backtest"]["spread_pips"],
                 initial_balance=cfg["backtest"]["initial_balance"],
                 audit_logger=audit_logger,
+                execution_config=execution_config,
             )
             
             result = engine.run(df)

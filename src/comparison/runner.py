@@ -10,6 +10,7 @@ import pandas as pd
 
 from src.audit.logger import AuditConfig, AuditLogger
 from src.backtest.engine import BacktestEngine, BacktestResult
+from src.backtest.execution import ExecutionConfig
 from src.data.cache import CandleCache
 from src.data.oanda_client import OandaClient, OandaConfig
 from src.features.build_features import FeatureConfig, build_breakout_features, build_regime_features
@@ -88,6 +89,11 @@ class MultiCurrencyRunner:
         risk_engine = RiskEngine(RiskConfig(**self.config["risk"]), audit_logger=audit_logger)
         policy_obj = RLPolicy(max_leverage=self.config["risk"]["max_leverage"], mode=policy)
         
+        # Load execution config if available
+        execution_config = None
+        if "execution" in self.config["backtest"]:
+            execution_config = ExecutionConfig(**self.config["backtest"]["execution"])
+        
         engine = BacktestEngine(
             regime_model=regime_model,
             classifier=classifier,
@@ -97,6 +103,7 @@ class MultiCurrencyRunner:
             spread_pips=self.config["backtest"]["spread_pips"],
             initial_balance=self.config["backtest"]["initial_balance"],
             audit_logger=audit_logger,
+            execution_config=execution_config,
         )
         
         result = engine.run(df)
