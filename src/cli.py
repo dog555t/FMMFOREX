@@ -56,9 +56,18 @@ def train_regime(args: argparse.Namespace) -> None:
     df = cache.load(cfg["trading"]["pair"], cfg["trading"]["timeframe"])
     if df is None:
         raise RuntimeError("No data cached. Run download-data first")
-    feat = build_regime_features(df)
+    
+    # Build features for regime model
+    feat_cfg = FeatureConfig(breakout_lookback=cfg["trading"]["breakout_lookback"], atr_period=cfg["trading"]["atr_period"])
+    breakout_feat = build_breakout_features(df, feat_cfg)
+    
+    # Build regime features matching the backtest engine's expectations
+    regime_features = breakout_feat[["atr", "vol_expansion"]].copy()
+    regime_features["vol"] = df["close"].pct_change().rolling(10).std().fillna(0)
+    regime_features["drawdown"] = (df["close"] - df["close"].cummax()) / df["close"].cummax()
+    
     model = RegimeModel(RegimeModelConfig())
-    model.fit(feat)
+    model.fit(regime_features.fillna(0))
     logger.info("Regime model trained on cached data")
 
 
@@ -87,8 +96,13 @@ def run_backtest(args: argparse.Namespace) -> None:
     breakout_feat = build_breakout_features(df, feat_cfg)
     labels = (breakout_feat["breakout_up"] | breakout_feat["breakout_down"]).astype(int)
 
+    # Build regime features matching the backtest engine's expectations
+    regime_features = breakout_feat[["atr", "vol_expansion"]].copy()
+    regime_features["vol"] = df["close"].pct_change().rolling(10).std().fillna(0)
+    regime_features["drawdown"] = (df["close"] - df["close"].cummax()) / df["close"].cummax()
+    
     regime_model = RegimeModel(RegimeModelConfig())
-    regime_model.fit(build_regime_features(df))
+    regime_model.fit(regime_features.fillna(0))
 
     classifier = FakeoutClassifier(ClassifierConfig())
     classifier.fit(breakout_feat.fillna(0), labels)
