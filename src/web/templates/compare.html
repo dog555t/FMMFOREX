@@ -106,6 +106,7 @@
 
 {% block scripts %}
 <script>
+// Initial balance from backtest config (default: 100000 from config.yaml)
 const INITIAL_BALANCE = 100000;
 
 document.getElementById('runComparison').addEventListener('click', async function() {

@@ -64,10 +64,11 @@ def _create_metrics_comparison(results: List[CurrencyPairResult]) -> str:
     """Create bar chart comparing key metrics."""
     pairs = [r.pair for r in results]
     final_balances = [r.metrics.get("final_balance", 0) for r in results]
-    initial_balance = results[0].metrics.get("final_balance", 100000) / (1 + (results[0].metrics.get("final_balance", 100000) - 100000) / 100000)
+    # Use a standard initial balance (this is the default in config.yaml)
+    INITIAL_BALANCE = 100000.0
     
     # Calculate returns as percentage
-    returns = [(fb - initial_balance) / initial_balance * 100 for fb in final_balances]
+    returns = [(fb - INITIAL_BALANCE) / INITIAL_BALANCE * 100 for fb in final_balances]
     
     fig, ax = plt.subplots(figsize=(10, 6))
     
